@@ -26,39 +26,13 @@ data_path = join(main_path, "data")
 #--------------------------------------------------
 # load data
 
-training_data = pd.read_csv(
+titanic_data = pd.read_csv(
     join(
         data_path,
         "raw",
-        "titanic_train.csv"
+        "Titanic Dataset.csv"
     )    
 )
-
-test_data = pd.read_csv(
-    join(
-        data_path,
-        "raw",
-        "titanic_test.csv"
-    )    
-)
-
-# NOTE: this data reflects a prediction that all women survived and all men
-# died. Since there is no other information available, I use this as this is the
-# actual survival pattern
-survived_test = pd.read_csv(
-    join(
-        data_path,
-        "raw",
-        "titanic_gender_submission.csv"
-    )    
-)
-
-#--------------------------------------------------
-# ratio between training and test data
-
-test_data.shape[0] / (test_data.shape[0] + training_data.shape[0])
-
-# Answer: 31.9%
 
 ###################################################
 # Preparation                                     #
@@ -92,17 +66,14 @@ def renaming_columns(titanic_data: pd.DataFrame) -> pd.DataFrame:
     
     #--------------------------------------------------
     # check if required columns are in the dataset
-    required_columns = ["Pclass", "SibSp", "Parch"]
+    required_columns = ["pclass", "sibsp", "parch"]
     for col in required_columns:
         if col not in titanic_data.columns:
             raise KeyError(f"Missing required column: '{col}'")
 
     #--------------------------------------------------
     titanic_data_copy = titanic_data.copy()
-    
-    # transform column names into lowercase
-    titanic_data_copy.columns = [col.lower() for col in titanic_data_copy.columns]
-    
+        
     # rename some columns
     titanic_data_copy = titanic_data_copy.rename(columns = {
         "pclass": "passenger_class",
@@ -118,6 +89,38 @@ def renaming_columns(titanic_data: pd.DataFrame) -> pd.DataFrame:
 #--------------------------------------------------
 # feature engineering and cleaning
 
+def remove_unnecessary_features(titanic_data: pd.DataFrame, cols_removed: list[str]) -> pd.DataFrame:
+    """
+    Remove unnecessary features
+    
+    This function removes unnecessary features from the dataset to reduce
+    its complexity.
+
+    Parameters
+    ----------
+    titanic_data : pd.DataFrame
+        Dataset with Titanic information.
+
+    Returns
+    -------
+    titanic_data_copy.
+        Modified dataset without the dropped columns
+    """
+    
+    #--------------------------------------------------
+    # drop columns
+    
+    titanic_data_copy = titanic_data.copy()
+    titanic_data_copy.drop(
+        columns = cols_removed,
+        inplace = True
+    )
+    
+    #--------------------------------------------------
+    # return
+    
+    return titanic_data_copy
+
 def adding_feature_family_size(titanic_data: pd.DataFrame) -> pd.DataFrame:
     """
     Adds the family size feature to the dataset.
@@ -129,7 +132,7 @@ def adding_feature_family_size(titanic_data: pd.DataFrame) -> pd.DataFrame:
     Parameters
     ----------
     titanic_data : pd.DataFrame
-        Dataset with Titanic information (can be training or test dataset).
+        Dataset with Titanic information.
         Must contain 'num_siblings_spouses' and 'num_parents_children' columns.
 
     Returns
@@ -177,7 +180,7 @@ def handling_missings(titanic_data: pd.DataFrame) -> pd.DataFrame:
     Parameters
     ----------
     titanic_data : pd.DataFrame
-        Dataset with Titanic information (can be training or test dataset).
+        Dataset with Titanic information.
 
     Returns
     -------
@@ -213,7 +216,7 @@ def cleaning_titles(titanic_data: pd.DataFrame) -> pd.DataFrame:
     Parameters
     ----------
     titanic_data : pd.DataFrame
-        Dataset with Titanic information (can be training or test dataset).
+        Dataset with Titanic information.
 
     Raises
     ------
@@ -298,7 +301,6 @@ def cleaning_titles(titanic_data: pd.DataFrame) -> pd.DataFrame:
     
     return titanic_data_copy
 
-
 def encoding_categorical_features(titanic_data: pd.DataFrame, categorical_cols: list) -> pd.DataFrame:
     """
     Encoding categorical features
@@ -308,7 +310,7 @@ def encoding_categorical_features(titanic_data: pd.DataFrame, categorical_cols: 
     Parameters
     ----------
     titanic_data : pd.DataFrame
-        Dataset with Titanic information (can be training or test dataset).
+        Dataset with Titanic information.
     categorical_cols : list
         List with categorical variables that should be encoded.
 
@@ -352,6 +354,7 @@ def cleaning_pipeline(titanic_data: pd.DataFrame, categorical_cols: list) -> pd.
     # apply transformations
     out = (titanic_data
         .pipe(renaming_columns)
+        .pipe(remove_unnecessary_features, cols_removed = ["boat", "body", "home.dest"])
         .pipe(adding_feature_family_size)
         .pipe(handling_missings)
         .pipe(cleaning_titles)
@@ -375,36 +378,10 @@ def cleaning_pipeline(titanic_data: pd.DataFrame, categorical_cols: list) -> pd.
     # return
     return out
 
-training_data_cleaned = cleaning_pipeline(
-    titanic_data = training_data,
+titanic_data_cleaned = cleaning_pipeline(
+    titanic_data = titanic_data,
     categorical_cols = ["passenger_class", "embarked", "title"]
 )
-
-test_data_cleaned = cleaning_pipeline(
-    titanic_data = test_data,
-    categorical_cols = ["passenger_class", "embarked", "title"]
-)
-
-###################################################
-# Prepare survived test data                      #
-###################################################
-
-# rename columns according to the other data
-survived_test_cleaned = survived_test.rename(
-    columns = {
-        "PassengerId": "passengerid",
-        "Survived": "survived"
-    }    
-)
-
-# merge survived data to test data
-test_data_cleaned = pd.merge(
-    test_data_cleaned,
-    survived_test_cleaned,
-    on = "passengerid",
-    how = "left"    
-)
-
 
 ###################################################
 # Export                                          #
@@ -420,5 +397,4 @@ def exporting_cleaned_data(titanic_data: pd.DataFrame, filename: str):
         index = False
     )
 
-exporting_cleaned_data(training_data_cleaned, filename = "titanic_training_prep")
-exporting_cleaned_data(test_data_cleaned, filename = "titanic_test_prep")
+exporting_cleaned_data(titanic_data_cleaned, filename = "titanic_data_prep")
