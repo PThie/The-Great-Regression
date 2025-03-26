@@ -9,3 +9,7 @@ This repository explores several different types of regressions. The code reprod
 ## Difference-in-Difference Regressions
 
 <a href="https://medium.com/@patthie/the-great-regression-with-python-difference-in-difference-regressions-c2e8ac980857">Blog post</a>
+
+## Fixed Effects Regressions
+
+<a href="https://medium.com/@patthie/the-great-regression-with-python-fixed-effect-regressions-4f17688e9ae8">Blog post</a>
